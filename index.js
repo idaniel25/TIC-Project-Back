@@ -1,26 +1,18 @@
 const express = require('express');
-const admin = require('firebase-admin');
-
-// Configurare Firebase Admin SDK
-const serviceAccount = require('./tic-project-9df42-firebase-adminsdk-l42qn-f7d45d0820.json'); // Adaugă calea corectă către cheile de autentificare
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-// Obține o referință la Firestore
-const db = admin.firestore();
+const cors = require('cors');
+const admin = require('./firebaseAdmin');
+const controller = require('./controller');
 
 const app = express();
 
-// Definirea rutelor și logicilor de server continuă aici...
+app.use(cors());
+app.use(express.json());
 
-// Ruta pentru un mesaj de testare
-app.get('/', (req, res) => {
-    res.send('Serverul backend rulează cu succes!');
-  });
+// Rute pentru echipe și jucatori
+app.get('/teams', controller.getEchipe);
+app.get('/players', controller.getJucatori);
 
-// Ascultă pe un anumit port (de exemplu, 3000)
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Serverul rulează pe portul ${port}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serverul rulează pe portul ${PORT}`);
 });
