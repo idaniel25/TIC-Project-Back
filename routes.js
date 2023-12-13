@@ -9,6 +9,6 @@ router.post('/players', createJucator);
 router.put('/echipe/:id', updateEchipa);
 router.delete('/echipe/:id', deleteEchipa);
 router.put('/jucatori/:id', updateJucator);
-router.delete('/jucatori/:id', deleteJucator);
+router.delete('/players/:id', deleteJucator);
 
 module.exports = router;

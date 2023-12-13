@@ -1,5 +1,5 @@
 const admin = require('./firebaseAdmin');
-
+//ADAUGA VALIDARI IN CAZUL IN CARE TEAM_ID NU ESTE VALID SAU NU EXISTA IN BD
 const db = admin.firestore();
 
 // Controlor pentru echipe
@@ -36,7 +36,7 @@ const getJucatori = async (req, res) => {
 const createEchipa = async (req, res) => {
   try {
     const { name } = req.body;
-    const echipaRef = await db.collection('teams').add({ name, playersRefs: [] });
+    const echipaRef = await db.collection('teams').add({ name, players: [] });
     const echipaDoc = await echipaRef.get();
     const echipa = echipaDoc.data();
     echipa.id = echipaDoc.id;
@@ -84,7 +84,7 @@ const createJucator = async (req, res) => {
 
     // Actualizează referința echipei cu referința noului jucător
     await db.collection('teams').doc(team_id).update({
-      playersRefs: admin.firestore.FieldValue.arrayUnion(jucatorRef),
+      players: admin.firestore.FieldValue.arrayUnion(jucatorRef),
     });
 
     res.json(jucator);
@@ -128,15 +128,18 @@ const deleteJucator = async (req, res) => {
     const { id } = req.params;
 
     // Obține vechea echipă a jucătorului
-    const jucatorDoc = await db.collection('jucatori').doc(id).get();
+    const jucatorDoc = await db.collection('players').doc(id).get();
+    if (!jucatorDoc.exists) {
+      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+    }
     const jucator = jucatorDoc.data();
 
     // Șterge jucătorul
-    await db.collection('jucatori').doc(id).delete();
+    await db.collection('players').doc(id).delete();
 
     // Actualizează referința echipei veche cu referința veche a jucătorului
-    await db.collection('echipe').doc(jucator.idEchipa).update({
-      playersRefs: admin.firestore.FieldValue.arrayRemove(db.collection('jucatori').doc(id)),
+    await db.collection('teams').doc(jucator.team_id).update({
+      players: admin.firestore.FieldValue.arrayRemove(db.collection('players').doc(id)),
     });
 
     res.json({ id });
