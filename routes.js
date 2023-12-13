@@ -7,7 +7,7 @@ router.get('/players', getJucatori);
 router.post('/teams', createEchipa); // Adăugată ruta pentru crearea echipei
 router.post('/players', createJucator); 
 router.put('/echipe/:id', updateEchipa);
-router.delete('/echipe/:id', deleteEchipa);
+router.delete('/teams/:id', deleteEchipa);
 router.put('/jucatori/:id', updateJucator);
 router.delete('/players/:id', deleteJucator);
 

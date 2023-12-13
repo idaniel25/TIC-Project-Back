@@ -1,5 +1,6 @@
 const admin = require('./firebaseAdmin');
 //ADAUGA VALIDARI IN CAZUL IN CARE TEAM_ID NU ESTE VALID SAU NU EXISTA IN BD
+//CAND STERG O ECHIPA SE STERG SI JUCATORII DIN ECHIPA ACEEA
 const db = admin.firestore();
 
 // Controlor pentru echipe
@@ -64,7 +65,24 @@ const updateEchipa = async (req, res) => {
 const deleteEchipa = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.collection('echipe').doc(id).delete();
+    // Verifică dacă echipa există
+    const teamDoc = await db.collection('teams').doc(id).get();
+    if (!teamDoc.exists) {
+      return res.status(404).json({ error: 'Echipa specificată nu există.' });
+    }
+
+     // Obține lista de jucători din echipă
+     const playersSnapshot = await db.collection('players').where('team_id', '==', id).get();
+
+     // Șterge toți jucătorii din echipă
+     const deletePlayerPromises = playersSnapshot.docs.map(async (playerDoc) => {
+       await db.collection('players').doc(playerDoc.id).delete();
+     });
+ 
+     await Promise.all(deletePlayerPromises);
+
+    // Șterge echipa
+    await db.collection('teams').doc(id).delete();
 
     res.json({ id });
   } catch (error) {
