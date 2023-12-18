@@ -53,9 +53,16 @@ const updateEchipa = async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
-    await db.collection('echipe').doc(id).update({ name });
+    // Verifică dacă echipa există
+    const teamDoc = await db.collection('teams').doc(id).get();
+    if (!teamDoc.exists) {
+      return res.status(404).json({ error: 'Echipa specificată nu există.' });
+    }
 
-    res.json({ id, name });
+    // Actualizează numele echipei
+    await db.collection('teams').doc(id).update({ name });
+
+    res.status(200).json({ message: 'Echipa actualizată cu succes.' });
   } catch (error) {
     console.error('Eroare la actualizarea echipei:', error);
     res.status(500).json({ error: 'Eroare la actualizarea echipei.' });
@@ -115,26 +122,38 @@ const createJucator = async (req, res) => {
 const updateJucator = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, idEchipa } = req.body;
+    const { name, team_id } = req.body;
 
+    // Verifică dacă jucătorul există
+    const playerDoc = await db.collection('players').doc(id).get();
+    if (!playerDoc.exists) {
+      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+    }
+        
     // Obține vechea echipă a jucătorului
-    const jucatorDoc = await db.collection('jucatori').doc(id).get();
+    const jucatorDoc = await db.collection('players').doc(id).get();
     const jucator = jucatorDoc.data();
-    
+
+    // Crează referința veche a jucătorului
+    const jucatorRef = db.collection('players').doc(id);
+
     // Actualizează referința echipei veche cu referința veche a jucătorului
-    await db.collection('echipe').doc(jucator.idEchipa).update({
-      playersRefs: admin.firestore.FieldValue.arrayRemove(jucatorRef),
+    await db.collection('teams').doc(jucator.team_id).update({
+      players: admin.firestore.FieldValue.arrayRemove(jucatorRef),
     });
 
     // Actualizează jucătorul
-    await db.collection('jucatori').doc(id).update({ name, idEchipa });
+    await db.collection('players').doc(id).update({ name, team_id: team_id });
+
+    // Crează referința nouă a jucătorului
+    const newJucatorRef = db.collection('players').doc(id);
 
     // Actualizează referința echipei noi cu referința nouă a jucătorului
-    await db.collection('echipe').doc(idEchipa).update({
-      playersRefs: admin.firestore.FieldValue.arrayUnion(db.collection('jucatori').doc(id)),
+    await db.collection('teams').doc(team_id).update({
+      players: admin.firestore.FieldValue.arrayUnion(newJucatorRef),
     });
 
-    res.json({ id, name, idEchipa });
+    res.status(200).json({ message: 'Jucător actualizat cu succes.' });
   } catch (error) {
     console.error('Eroare la actualizarea jucătorului:', error);
     res.status(500).json({ error: 'Eroare la actualizarea jucătorului.' });

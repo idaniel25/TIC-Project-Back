@@ -6,9 +6,9 @@ router.get('/teams', getEchipe);
 router.get('/players', getJucatori);
 router.post('/teams', createEchipa); // Adăugată ruta pentru crearea echipei
 router.post('/players', createJucator); 
-router.put('/echipe/:id', updateEchipa);
+router.put('/teams/:id', updateEchipa);
 router.delete('/teams/:id', deleteEchipa);
-router.put('/jucatori/:id', updateJucator);
+router.put('/players/:id', updateJucator);
 router.delete('/players/:id', deleteJucator);
 
 module.exports = router;
