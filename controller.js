@@ -82,11 +82,11 @@ const deleteEchipa = async (req, res) => {
      const playersSnapshot = await db.collection('players').where('team_id', '==', id).get();
 
      // Șterge toți jucătorii din echipă
-     const deletePlayerPromises = playersSnapshot.docs.map(async (playerDoc) => {
-       await db.collection('players').doc(playerDoc.id).delete();
+     const updatePlayerPromises = playersSnapshot.docs.map(async (playerDoc) => {
+       await db.collection('players').doc(playerDoc.id).update({ team_id: '' });
      });
  
-     await Promise.all(deletePlayerPromises);
+     await Promise.all(updatePlayerPromises);
 
     // Șterge echipa
     await db.collection('teams').doc(id).delete();
