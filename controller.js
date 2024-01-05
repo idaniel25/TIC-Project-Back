@@ -174,9 +174,12 @@ const deleteJucator = async (req, res) => {
     await db.collection('players').doc(id).delete();
 
     // Actualizează referința echipei veche cu referința veche a jucătorului
-    await db.collection('teams').doc(jucator.team_id).update({
-      players: admin.firestore.FieldValue.arrayRemove(db.collection('players').doc(id)),
-    });
+    // Verifică dacă jucătorul are o echipă înainte de a actualiza referința echipei
+    if (jucator.team_id) {
+      await db.collection('teams').doc(jucator.team_id).update({
+        players: admin.firestore.FieldValue.arrayRemove(db.collection('players').doc(id)),
+      });
+    }
 
     res.json({ id });
   } catch (error) {
