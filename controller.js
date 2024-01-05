@@ -188,6 +188,35 @@ const deleteJucator = async (req, res) => {
   }
 };
 
+const deletePlayerFromTeam = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obține vechea echipă a jucătorului
+    const playerDoc = await db.collection('players').doc(id).get();
+    if (!playerDoc.exists) {
+      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+    }
+
+    const playerData = playerDoc.data();
+
+    // Șterge jucătorul din echipă
+    await db.collection('teams').doc(playerData.team_id).update({
+      players: admin.firestore.FieldValue.arrayRemove(id),
+    });
+
+    // Actualizează jucătorul pentru a înlătura echipa
+    await db.collection('players').doc(id).update({
+      team_id: '',
+    });
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Eroare la ștergerea jucătorului:', error);
+    res.status(500).json({ error: 'Eroare la ștergerea jucătorului.' });
+  }
+};
+
 module.exports = {
   getEchipe,
   getJucatori,
@@ -197,4 +226,5 @@ module.exports = {
   createJucator,
   updateJucator,
   deleteJucator,
+  deletePlayerFromTeam,
 };
