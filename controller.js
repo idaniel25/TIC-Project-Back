@@ -6,7 +6,8 @@ const db = admin.firestore();
 // Controlor pentru echipe
 const getEchipe = async (req, res) => {
   try {
-    const snapshot = await db.collection('teams').get();
+    const { user_id } = req.query;
+    const snapshot = await db.collection('teams').where('user_id', '==', user_id).get();
     const echipe = [];
     snapshot.forEach(doc => {
       echipe.push({ id: doc.id, ...doc.data() });
@@ -21,7 +22,8 @@ const getEchipe = async (req, res) => {
 // Controlor pentru jucatori
 const getJucatori = async (req, res) => {
   try {
-    const snapshot = await db.collection('players').get();
+    const { user_id } = req.query; // ID utilizator din sesiunea autentificată
+    const snapshot = await db.collection('players').where('user_id', '==', user_id).get();
     const jucatori = [];
     snapshot.forEach(doc => {
       jucatori.push({ id: doc.id, ...doc.data() });
@@ -36,8 +38,8 @@ const getJucatori = async (req, res) => {
 // CRUD pentru echipe
 const createEchipa = async (req, res) => {
   try {
-    const { name } = req.body;
-    const echipaRef = await db.collection('teams').add({ name, players: [] });
+    const { name, user_id } = req.body;
+    const echipaRef = await db.collection('teams').add({ name, players: [], user_id });
     const echipaDoc = await echipaRef.get();
     const echipa = echipaDoc.data();
     echipa.id = echipaDoc.id;
@@ -101,8 +103,8 @@ const deleteEchipa = async (req, res) => {
 // CRUD pentru jucători
 const createJucator = async (req, res) => {
   try {
-    const { name } = req.body;
-    const jucatorRef = await db.collection('players').add({ name, team_id: '' });
+    const { name, user_id } = req.body;
+    const jucatorRef = await db.collection('players').add({ name, team_id: '', user_id });
     const jucatorDoc = await jucatorRef.get();
     const jucator = jucatorDoc.data();
     jucator.id = jucatorDoc.id;
