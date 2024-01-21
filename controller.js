@@ -1,6 +1,5 @@
 const admin = require('./firebaseAdmin');
-//ADAUGA VALIDARI IN CAZUL IN CARE TEAM_ID NU ESTE VALID SAU NU EXISTA IN BD
-//CAND STERG O ECHIPA SE STERG SI JUCATORII DIN ECHIPA ACEEA
+const generateUserData = require('./generateData');
 const db = admin.firestore();
 
 // Controlor pentru echipe
@@ -48,6 +47,22 @@ const createEchipa = async (req, res) => {
   } catch (error) {
     console.error('Eroare la crearea echipei:', error);
     res.status(500).json({ error: 'Eroare la crearea echipei.' });
+  }
+};
+
+const createEchipaFaker = async (name, user_id) => {
+  try {
+    const echipaRef = await db.collection('teams').add({ name, players: [], user_id });
+    const echipaDoc = await echipaRef.get();
+    const echipa = echipaDoc.data();
+    echipa.id = echipaDoc.id;
+
+    // Returnați echipa creată în loc să utilizați res.json()
+    return echipa;
+  } catch (error) {
+    console.error('Eroare la crearea echipei:', error);
+    // În caz de eroare, returnați null sau aruncați eroarea mai departe pentru a trata mai sus
+    return null;
   }
 };
 
@@ -104,15 +119,31 @@ const deleteEchipa = async (req, res) => {
 const createJucator = async (req, res) => {
   try {
     const { name, user_id } = req.body;
-    const jucatorRef = await db.collection('players').add({ name, team_id: '', user_id });
-    const jucatorDoc = await jucatorRef.get();
-    const jucator = jucatorDoc.data();
-    jucator.id = jucatorDoc.id;
+    const playerRef = await db.collection('players').add({ name, team_id: '', user_id });
+    const playerDoc = await playerRef.get();
+    const player = playerDoc.data();
+    player.id = playerDoc.id;
 
-    res.json(jucator);
+    res.json(player);
   } catch (error) {
     console.error('Eroare la crearea jucătorului:', error);
     res.status(500).json({ error: 'Eroare la crearea jucătorului.' });
+  }
+};
+
+const createJucatorFaker = async (name, user_id) => {
+  try {
+    const playerRef = await db.collection('players').add({ name, team_id: '', user_id });
+    const playerDoc = await playerRef.get();
+    const player = playerDoc.data();
+    player.id = playerDoc.id;
+
+    // Returnați echipa creată în loc să utilizați res.json()
+    return player;
+  } catch (error) {
+    console.error('Eroare la crearea jucătorului:', error);
+    // În caz de eroare, returnați null sau aruncați eroarea mai departe pentru a trata mai sus
+    return null;
   }
 };
 
@@ -219,6 +250,28 @@ const deletePlayerFromTeam = async (req, res) => {
   }
 };
 
+// Funcție care adaugă datele generate în baza de date
+const generateData = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    const { teams, players } = generateUserData(user_id, 2, 2);
+
+    // Adaugă echipe în baza de date
+    const echipePromises = teams.map((team) => createEchipaFaker(team.name, user_id));
+    await Promise.all(echipePromises);
+
+    // Adaugă jucători în baza de date
+    const jucatoriPromises = players.map((player) => createJucatorFaker(player.name, user_id ));
+    await Promise.all(jucatoriPromises);
+
+    res.status(200).json({ message: 'Date generate și adăugate cu succes!' });
+  } catch (error) {
+    console.error('Eroare la generarea și adăugarea datelor:', error.message);
+    res.status(500).json({ error: 'Eroare la generarea și adăugarea datelor.' });
+  }
+};
+
+
 module.exports = {
   getEchipe,
   getJucatori,
@@ -229,4 +282,5 @@ module.exports = {
   updateJucator,
   deleteJucator,
   deletePlayerFromTeam,
+  generateData,
 };

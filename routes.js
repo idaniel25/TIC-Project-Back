@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getEchipe, getJucatori, createEchipa, createJucator, updateEchipa, deleteEchipa, updateJucator, deleteJucator, deletePlayerFromTeam } = require('./controller');
+const { getEchipe, getJucatori, createEchipa, createJucator, updateEchipa, deleteEchipa, updateJucator, deleteJucator, deletePlayerFromTeam, generateData } = require('./controller');
 
 router.get('/teams', getEchipe);
 router.get('/players', getJucatori);
@@ -11,5 +11,6 @@ router.delete('/teams/:id', deleteEchipa);
 router.put('/players/:id', updateJucator);
 router.delete('/players/:id', deleteJucator);
 router.delete('/activePlayers/:id', deletePlayerFromTeam);
+router.post('/generate-data', generateData);
 
 module.exports = router;
