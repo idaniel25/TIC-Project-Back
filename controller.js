@@ -119,6 +119,12 @@ const deleteEchipa = async (req, res) => {
 const createJucator = async (req, res) => {
   try {
     const { name, user_id } = req.body;
+
+    // Verifică dacă utilizatorul este autentificat
+    if (!req.user) {
+      return res.status(401).json({ error: 'Utilizatorul nu este autentificat.' });
+    }
+
     const playerRef = await db.collection('players').add({ name, team_id: '', user_id });
     const playerDoc = await playerRef.get();
     const player = playerDoc.data();
