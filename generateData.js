@@ -3,12 +3,12 @@ const faker = require('faker');
 const generatePlayer = (user_id) => ({
   user_id: user_id,
   name: faker.name.findName(),
-  team_id: "", // Înainte de a fi adăugat la o echipă
+  team_id: "",
 });
 
 const generateTeam = (user_id) => ({
   user_id: user_id,
-  name: faker.company.companyName(),
+  name: faker.lorem.word(5),
   players: [],
 });
 

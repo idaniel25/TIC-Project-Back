@@ -1,292 +1,351 @@
-const admin = require('./firebaseAdmin');
-const generateUserData = require('./generateData');
+const admin = require("./firebaseAdmin");
+const generateUserData = require("./generateData");
 const db = admin.firestore();
 
-// Controlor pentru echipe
-const getEchipe = async (req, res) => {
+const getTeams = async (req, res) => {
   try {
     const { user_id } = req.query;
-    const snapshot = await db.collection('teams').where('user_id', '==', user_id).get();
-    const echipe = [];
-    snapshot.forEach(doc => {
-      echipe.push({ id: doc.id, ...doc.data() });
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const snapshot = await db
+      .collection("teams")
+      .where("user_id", "==", user_id)
+      .get();
+    const teams = [];
+    snapshot.forEach((doc) => {
+      teams.push({ id: doc.id, ...doc.data() });
     });
-    res.json(echipe);
+    res.status(200).json(teams);
   } catch (error) {
-    console.error('Eroare la obținerea echipei:', error);
-    res.status(500).json({ error: 'Eroare la obținerea echipei' });
+    console.error("Error retrieving teams:", error);
+    res.status(500).json({ error: "Error retrieving teams" });
   }
 };
 
-// Controlor pentru jucatori
-const getJucatori = async (req, res) => {
+const getPlayers = async (req, res) => {
   try {
-    const { user_id } = req.query; // ID utilizator din sesiunea autentificată
-    const snapshot = await db.collection('players').where('user_id', '==', user_id).get();
-    const jucatori = [];
-    snapshot.forEach(doc => {
-      jucatori.push({ id: doc.id, ...doc.data() });
+    const { user_id } = req.query;
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const snapshot = await db
+      .collection("players")
+      .where("user_id", "==", user_id)
+      .get();
+    const players = [];
+    snapshot.forEach((doc) => {
+      players.push({ id: doc.id, ...doc.data() });
     });
-    res.json(jucatori);
+    res
+      .status(200)
+      .json(players);
   } catch (error) {
-    console.error('Eroare la obținerea jucătorilor:', error);
-    res.status(500).json({ error: 'Eroare la obținerea jucătorilor' });
+    console.error("Error retrieving players:", error);
+    res.status(500).json({ error: "Error retrieving players" });
   }
 };
 
-// CRUD pentru echipe
-const createEchipa = async (req, res) => {
+const createTeam = async (req, res) => {
   try {
     const { name, user_id } = req.body;
-    const echipaRef = await db.collection('teams').add({ name, players: [], user_id });
-    const echipaDoc = await echipaRef.get();
-    const echipa = echipaDoc.data();
-    echipa.id = echipaDoc.id;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Team name cannot be empty." });
+    }
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const existingTeam = await db.collection("teams").where("name", "==", name).get();
+    if (!existingTeam.empty) {
+      return res.status(409).json({ error: "A team with the same name already exists" });
+    }
+    const teamRef = await db
+      .collection("teams")
+      .add({ name, players: [], user_id });
+    const teamDoc = await teamRef.get();
+    const team = teamDoc.data();
+    team.id = teamDoc.id;
 
-    res.json(echipa);
+    res.status(201).json(team);
   } catch (error) {
-    console.error('Eroare la crearea echipei:', error);
-    res.status(500).json({ error: 'Eroare la crearea echipei.' });
+    console.error("Error creating the team:", error);
+    res.status(500).json({ error: "Error creating the team." });
   }
 };
 
-const createEchipaFaker = async (name, user_id) => {
+const createTeamFaker = async (name, user_id) => {
   try {
-    const echipaRef = await db.collection('teams').add({ name, players: [], user_id });
-    const echipaDoc = await echipaRef.get();
-    const echipa = echipaDoc.data();
-    echipa.id = echipaDoc.id;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Team name cannot be empty." });
+    }
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const teamRef = await db
+      .collection("teams")
+      .add({ name, players: [], user_id });
+    const teamDoc = await teamRef.get();
+    const team = teamDoc.data();
+    team.id = teamDoc.id;
 
-    // Returnați echipa creată în loc să utilizați res.json()
-    return echipa;
+    return team;
   } catch (error) {
-    console.error('Eroare la crearea echipei:', error);
-    // În caz de eroare, returnați null sau aruncați eroarea mai departe pentru a trata mai sus
+    console.error("Error creating the faker team:", error);
     return null;
   }
 };
 
-const updateEchipa = async (req, res) => {
+const updateTeam = async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
-    // Verifică dacă echipa există
-    const teamDoc = await db.collection('teams').doc(id).get();
-    if (!teamDoc.exists) {
-      return res.status(404).json({ error: 'Echipa specificată nu există.' });
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Team name cannot be empty." });
     }
+    if (!id) {
+      return res.status(400).json({ error: "ID is missing." });
+    }
+    const teamDoc = await db.collection("teams").doc(id).get();
+    if (!teamDoc.exists) {
+      return res
+        .status(404)
+        .json({ error: "The specified team does not exist." });
+    }
+    await db.collection("teams").doc(id).update({ name });
 
-    // Actualizează numele echipei
-    await db.collection('teams').doc(id).update({ name });
-
-    res.status(200).json({ message: 'Echipa actualizată cu succes.' });
+    res
+      .status(200)
+      .json({ message: "The team has been successfully updated." });
   } catch (error) {
-    console.error('Eroare la actualizarea echipei:', error);
-    res.status(500).json({ error: 'Eroare la actualizarea echipei.' });
+    console.error("Error updating the team:", error);
+    res.status(500).json({ error: "Error updating the team." });
   }
 };
 
-const deleteEchipa = async (req, res) => {
+const deleteTeam = async (req, res) => {
   try {
     const { id } = req.params;
-    // Verifică dacă echipa există
-    const teamDoc = await db.collection('teams').doc(id).get();
-    if (!teamDoc.exists) {
-      return res.status(404).json({ error: 'Echipa specificată nu există.' });
+    if (!id) {
+      return res.status(400).json({ error: "ID is missing." });
     }
+    const teamDoc = await db.collection("teams").doc(id).get();
+    if (!teamDoc.exists) {
+      return res
+        .status(404)
+        .json({ error: "The specified team does not exist." });
+    }
+    const playersSnapshot = await db
+      .collection("players")
+      .where("team_id", "==", id)
+      .get();
+    const updatePlayerPromises = playersSnapshot.docs.map(async (playerDoc) => {
+      await db.collection("players").doc(playerDoc.id).update({ team_id: "" });
+    });
+    await Promise.all(updatePlayerPromises);
+    await db.collection("teams").doc(id).delete();
 
-     // Obține lista de jucători din echipă
-     const playersSnapshot = await db.collection('players').where('team_id', '==', id).get();
-
-     // Șterge toți jucătorii din echipă
-     const updatePlayerPromises = playersSnapshot.docs.map(async (playerDoc) => {
-       await db.collection('players').doc(playerDoc.id).update({ team_id: '' });
-     });
- 
-     await Promise.all(updatePlayerPromises);
-
-    // Șterge echipa
-    await db.collection('teams').doc(id).delete();
-
-    res.json({ id });
+    res.status(200).json(id);
   } catch (error) {
-    console.error('Eroare la ștergerea echipei:', error);
-    res.status(500).json({ error: 'Eroare la ștergerea echipei.' });
+    console.error("Error deleting the team:", error);
+    res.status(500).json({ error: "Error deleting the team." });
   }
 };
 
-// CRUD pentru jucători
-const createJucator = async (req, res) => {
+const createPlayer = async (req, res) => {
   try {
     const { name, user_id } = req.body;
-
-    // Verifică dacă utilizatorul este autentificat
-    if (!req.user) {
-      return res.status(401).json({ error: 'Utilizatorul nu este autentificat.' });
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Player name cannot be empty." });
     }
-
-    const playerRef = await db.collection('players').add({ name, team_id: '', user_id });
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const playerRef = await db
+      .collection("players")
+      .add({ name, team_id: "", user_id });
     const playerDoc = await playerRef.get();
     const player = playerDoc.data();
     player.id = playerDoc.id;
 
-    res.json(player);
+    res.status(201).json(player);
   } catch (error) {
-    console.error('Eroare la crearea jucătorului:', error);
-    res.status(500).json({ error: 'Eroare la crearea jucătorului.' });
+    console.error("Error creating the player:", error);
+    res.status(500).json({ error: "Error creating the player." });
   }
 };
 
-const createJucatorFaker = async (name, user_id) => {
+const createPlayerFaker = async (name, user_id) => {
   try {
-    const playerRef = await db.collection('players').add({ name, team_id: '', user_id });
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Player name cannot be empty." });
+    }
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
+    const playerRef = await db
+      .collection("players")
+      .add({ name, team_id: "", user_id });
     const playerDoc = await playerRef.get();
     const player = playerDoc.data();
     player.id = playerDoc.id;
 
-    // Returnați echipa creată în loc să utilizați res.json()
     return player;
   } catch (error) {
-    console.error('Eroare la crearea jucătorului:', error);
-    // În caz de eroare, returnați null sau aruncați eroarea mai departe pentru a trata mai sus
+    console.error("Error creating the faker player:", error);
     return null;
   }
 };
 
-const updateJucator = async (req, res) => {
+const updatePlayer = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, team_id } = req.body;
-
-    // Verifică dacă jucătorul există
-    const playerDoc = await db.collection('players').doc(id).get();
+    if (!id) {
+      return res.status(400).json({ error: "Player ID is missing." });
+    }
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Player name cannot be empty." });
+    }
+    if (!team_id) {
+      return res.status(400).json({ error: "Team ID is missing." });
+    }
+    const playerDoc = await db.collection("players").doc(id).get();
     if (!playerDoc.exists) {
-      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+      return res
+        .status(404)
+        .json({ error: "The specified player does not exist." });
     }
-
-    // Obține vechea echipă a jucătorului
-    const jucator = playerDoc.data();
-
-    // Dacă team_id nu este furnizat, setează-l la null
-    const newTeamId = team_id || '';
-
-    // Crează referința veche a jucătorului
-    const jucatorRef = db.collection('players').doc(id);
-
-    // Actualizează referința echipei veche cu referința veche a jucătorului
-    if (jucator.team_id) {
-      await db.collection('teams').doc(jucator.team_id).update({
-        players: admin.firestore.FieldValue.arrayRemove(jucatorRef),
-      });
+    const player = playerDoc.data();
+    const newTeamId = team_id || "";
+    const playerRef = db.collection("players").doc(id);
+    if (player.team_id) {
+      await db
+        .collection("teams")
+        .doc(player.team_id)
+        .update({
+          players: admin.firestore.FieldValue.arrayRemove(playerRef),
+        });
     }
-
-    // Actualizează jucătorul
-    await db.collection('players').doc(id).update({ name, team_id: newTeamId });
-
-    // Actualizează referința echipei noi cu referința nouă a jucătorului
+    await db.collection("players").doc(id).update({ name, team_id: newTeamId });
     if (newTeamId) {
-      await db.collection('teams').doc(newTeamId).update({
-        players: admin.firestore.FieldValue.arrayUnion(jucatorRef),
-      });
+      await db
+        .collection("teams")
+        .doc(newTeamId)
+        .update({
+          players: admin.firestore.FieldValue.arrayUnion(playerRef),
+        });
     }
 
-    res.status(200).json({ message: 'Jucător actualizat cu succes.' });
+    res
+      .status(200)
+      .json({ message: "The player has been successfully updated." });
   } catch (error) {
-    console.error('Eroare la actualizarea jucătorului:', error);
-    res.status(500).json({ error: 'Eroare la actualizarea jucătorului.' });
+    console.error("Error updating the player:", error);
+    res.status(500).json({ error: "Error updating the player." });
   }
 };
 
-
-const deleteJucator = async (req, res) => {
+const deletePlayer = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Obține vechea echipă a jucătorului
-    const jucatorDoc = await db.collection('players').doc(id).get();
-    if (!jucatorDoc.exists) {
-      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+    if (!id) {
+      return res.status(400).json({ error: "Player ID is missing." });
     }
-    const jucator = jucatorDoc.data();
+    const playerDoc = await db.collection("players").doc(id).get();
+    if (!playerDoc.exists) {
+      return res
+        .status(404)
+        .json({ error: "The specified player does not exist." });
+    }
+    const player = playerDoc.data();
+    await db.collection("players").doc(id).delete();
 
-    // Șterge jucătorul
-    await db.collection('players').doc(id).delete();
-
-    // Actualizează referința echipei veche cu referința veche a jucătorului
-    // Verifică dacă jucătorul are o echipă înainte de a actualiza referința echipei
-    if (jucator.team_id) {
-      await db.collection('teams').doc(jucator.team_id).update({
-        players: admin.firestore.FieldValue.arrayRemove(db.collection('players').doc(id)),
-      });
+    if (player.team_id) {
+      await db
+        .collection("teams")
+        .doc(player.team_id)
+        .update({
+          players: admin.firestore.FieldValue.arrayRemove(
+            db.collection("players").doc(id)
+          ),
+        });
     }
 
-    res.json({ id });
+    res.status(200).json(id);
   } catch (error) {
-    console.error('Eroare la ștergerea jucătorului:', error);
-    res.status(500).json({ error: 'Eroare la ștergerea jucătorului.' });
+    console.error("Error deleting the player:", error);
+    res.status(500).json({ error: "Error deleting the player." });
   }
 };
 
 const deletePlayerFromTeam = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Obține vechea echipă a jucătorului
-    const playerDoc = await db.collection('players').doc(id).get();
+    if (!id) {
+      return res.status(400).json({ error: "Player ID is missing." });
+    }
+    const playerDoc = await db.collection("players").doc(id).get();
     if (!playerDoc.exists) {
-      return res.status(404).json({ error: 'Jucătorul specificat nu există.' });
+      return res
+        .status(404)
+        .json({ error: "The specified player does not exist." });
     }
 
     const playerData = playerDoc.data();
+    await db
+      .collection("teams")
+      .doc(playerData.team_id)
+      .update({
+        players: admin.firestore.FieldValue.arrayRemove(id),
+      });
 
-    // Șterge jucătorul din echipă
-    await db.collection('teams').doc(playerData.team_id).update({
-      players: admin.firestore.FieldValue.arrayRemove(id),
+    await db.collection("players").doc(id).update({
+      team_id: "",
     });
 
-    // Actualizează jucătorul pentru a înlătura echipa
-    await db.collection('players').doc(id).update({
-      team_id: '',
-    });
-    
-    res.json({ id });
+    res
+      .status(200)
+      .json(id);
   } catch (error) {
-    console.error('Eroare la ștergerea jucătorului:', error);
-    res.status(500).json({ error: 'Eroare la ștergerea jucătorului.' });
+    console.error("Error deleting the player from the team:", error);
+    res.status(500).json({ error: "Error deleting the player from the team." });
   }
 };
 
-// Funcție care adaugă datele generate în baza de date
 const generateData = async (req, res) => {
   try {
     const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing." });
+    }
     const { teams, players } = generateUserData(user_id, 2, 2);
 
-    // Adaugă echipe în baza de date
-    const echipePromises = teams.map((team) => createEchipaFaker(team.name, user_id));
-    await Promise.all(echipePromises);
+    const teamsPromises = teams.map((team) =>
+      createTeamFaker(team.name, user_id)
+    );
+    await Promise.all(teamsPromises);
 
-    // Adaugă jucători în baza de date
-    const jucatoriPromises = players.map((player) => createJucatorFaker(player.name, user_id ));
-    await Promise.all(jucatoriPromises);
+    const playersPromises = players.map((player) =>
+      createPlayerFaker(player.name, user_id)
+    );
+    await Promise.all(playersPromises);
 
-    res.status(200).json({ message: 'Date generate și adăugate cu succes!' });
+    res.status(200).json({ message: "Data generated and added successfully!" });
   } catch (error) {
-    console.error('Eroare la generarea și adăugarea datelor:', error.message);
-    res.status(500).json({ error: 'Eroare la generarea și adăugarea datelor.' });
+    console.error("Error generating and adding data:", error.message);
+    res.status(500).json({ error: "Error generating and adding data." });
   }
 };
 
-
 module.exports = {
-  getEchipe,
-  getJucatori,
-  createEchipa,
-  updateEchipa,
-  deleteEchipa,
-  createJucator,
-  updateJucator,
-  deleteJucator,
+  getTeams,
+  getPlayers,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  createPlayer,
+  updatePlayer,
+  deletePlayer,
   deletePlayerFromTeam,
   generateData,
 };
